@@ -43,8 +43,8 @@ Pastikan kamu sudah menginstall **Node.js** dan **Git** di komputer kamu.
 
 1.  **Clone Repository ini:**
     ```bash
-    git clone [https://github.com/UsernameKamu/BloodSword-Bot.git](https://github.com/UsernameKamu/BloodSword-Bot.git)
-    cd BloodSword-Bot
+    git clone [https://github.com/demongki/basebot1_1]
+    cd basebot1_1
     ```
 
 2.  **Install Module (Dependencies):**
