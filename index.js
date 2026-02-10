@@ -3,7 +3,7 @@
 import './zakkyconfig.js'; 
 import { showBanner } from './display.js';
 import { createSticker, webpToImage } from './lib/sticker_func.js';
-import ssyoutube from './lib/scraper_yt.js'; 
+// import ssyoutube from './lib/scraper_yt.js'; // SAYA MATIKAN KARENA TIDAK DIPAKAI
 
 import { 
     default as makeWASocket, 
@@ -12,7 +12,9 @@ import {
     fetchLatestBaileysVersion, 
     makeCacheableSignalKeyStore,
     downloadMediaMessage,
-    jidDecode
+    jidDecode,
+    proto, 
+    generateWAMessageFromContent 
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import readline from 'readline';
@@ -53,18 +55,22 @@ async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     const { version } = await fetchLatestBaileysVersion();
     
+    // Spinner loading
     const spinner = ora({ text: 'Menghubungkan ke BloodSword Server...', color: 'yellow' }).start();
 
     const sock = makeWASocket({
         version,
-        logger: pino({ level: 'silent' }),
+        // PERBAIKAN 1: Ganti silent jadi 'error' biar kalau ada masalah kelihatan, tapi gak nyepam
+        logger: pino({ level: 'error' }), 
         printQRInTerminal: false,
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
         },
-        browser: ["BloodSword Contact", "Chrome", "20.0.04"],
+        // PERBAIKAN 2: Ganti browser jadi Ubuntu biar lebih stabil saat pairing
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
         markOnlineOnConnect: true,
+        generateHighQualityLinkPreview: true,
     });
 
     if (!sock.authState.creds.registered) {
@@ -94,6 +100,11 @@ async function connectToWhatsApp() {
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
             spinner.fail(chalk.red('Koneksi Terputus!'));
+            // Cek kode error spesifik
+            if (lastDisconnect.error?.output?.statusCode === 401) {
+                console.log(chalk.red("Sesi Invalid/Logout. Silakan hapus folder auth_info_baileys dan scan ulang."));
+                process.exit(1);
+            }
             if (shouldReconnect) {
                 console.log(chalk.yellow('Mencoba reconnect...'));
                 connectToWhatsApp();
@@ -128,20 +139,16 @@ async function connectToWhatsApp() {
 
                 // --- LOG TERMINAL KEREN (DASHBOARD STYLE) ---
                 if (body) {
-                    // Ambil Jam Sekarang
                     const time = new Date().toLocaleTimeString('id-ID');
                     
-                    // Tentukan Label (Perintah vs Chat Biasa)
                     const cmdLog = isCmd 
-                        ? chalk.bgRed.white.bold(' ⚔️ COMMAND ') // Kalau Command, latar Merah
-                        : chalk.bgBlue.white.bold(' 💬 MESSAGE '); // Kalau Chat biasa, latar Biru
+                        ? chalk.bgRed.white.bold(' ⚔️ COMMAND ') 
+                        : chalk.bgBlue.white.bold(' 💬 MESSAGE '); 
 
-                    // Tentukan Tipe Chat
                     const typeLog = isGroup 
                         ? chalk.bold.magenta('👥 GROUP') 
                         : chalk.bold.green('👤 PRIVATE');
 
-                    // Tampilkan Log dalam bentuk Kotak
                     console.log(chalk.bold.cyan('╭──────────────────────────────────────────────────'));
                     console.log(`│ ${cmdLog} | ${chalk.yellow(time)} | ${typeLog}`);
                     console.log(`│ 👮 Dari: ${chalk.bold.white(pushName)}`);
@@ -171,9 +178,11 @@ async function connectToWhatsApp() {
 🤖 *INTELLIGENCE*
 👉 .ai [pertanyaan] (Tanya Bot)
 
+🌍 *TOOLS*
+👉 .gempa (Info Gempa BMKG)
+
 _Powered by Baileys Multi-Device_
 `;
-                        // Tampilan Kartu Nama (Ad Reply)
                         await sock.sendMessage(remoteJid, { 
                             text: menuText,
                             contextInfo: {
@@ -189,15 +198,13 @@ _Powered by Baileys Multi-Device_
                         }, { quoted: msg });
                         break;
 
-                    // --- FITUR OWNER (REQUEST: CONTACT CARD) ---
                     case 'owner':
                     case 'creator':
-                        // Format vCard (Standar Kartu Nama Internasional)
                         const vcard = 'BEGIN:VCARD\n' 
                             + 'VERSION:3.0\n' 
-                            + `FN:${global.ownerName}\n` // Nama Lengkap
-                            + `ORG:${global.namaStore};\n` // Nama Toko/Organisasi
-                            + `TEL;type=CELL;type=VOICE;waid=${global.kontakOwner}:${global.kontakOwner}\n` // Nomor WA
+                            + `FN:${global.ownerName}\n` 
+                            + `ORG:${global.namaStore};\n` 
+                            + `TEL;type=CELL;type=VOICE;waid=${global.kontakOwner}:${global.kontakOwner}\n` 
                             + 'END:VCARD';
 
                         await sock.sendMessage(remoteJid, { 
@@ -206,11 +213,9 @@ _Powered by Baileys Multi-Device_
                                 contacts: [{ vcard }] 
                             }
                         }, { quoted: msg });
-                        
                         await sock.sendMessage(remoteJid, { text: 'Tuh kontak Owner saya, jangan lupa di-save ya kak! 😉' }, { quoted: msg });
                         break;
 
-                    // --- FITUR SYSTEM INFO ---
                     case 'info':
                     case 'device':
                     case 'status':
@@ -288,16 +293,14 @@ _Powered by Baileys Multi-Device_
                            await sock.sendMessage(remoteJid, { text: 'Gagal. Pastikan bukan stiker bergerak.' }, { quoted: msg });
                         }
                         break;
-                       // --- FITUR SAFETY (INFO GEMPA BMKG) ---
+
                     case 'gempa':
                     case 'infogempa':
-                        await sock.sendMessage(remoteJid, { react: { text: "🌍", key: msg.key } }); // Reaksi biar keren
+                        await sock.sendMessage(remoteJid, { react: { text: "🌍", key: msg.key } }); 
 
                         try {
-                            // Ambil data langsung dari BMKG (Format JSON)
                             const { data } = await axios.get('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json');
                             const gempa = data.Infogempa.gempa;
-
                             const teksGempa = `
 🌋 *INFO GEMPA TERKINI*
 
@@ -309,65 +312,30 @@ _Powered by Baileys Multi-Device_
 
 _Sumber: BMKG Indonesia_
 `;
-                            // BMKG juga kasih gambar peta gempanya (Shakemap)
                             const imageGempa = `https://data.bmkg.go.id/DataMKG/TEWS/${gempa.Shakemap}`;
-                            
                             await sock.sendMessage(remoteJid, { image: { url: imageGempa }, caption: teksGempa }, { quoted: msg });
                         } catch (e) {
                             console.error(e);
                             await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil data BMKG.' }, { quoted: msg });
                         }
                         break;
-                        // --- FITUR DOWNLOADER YOUTUBE (PREMIUM) ---
-                    case 'yt':
-                    case 'youtube':
-                    case 'ytmp4':
-                        if (!q) return await sock.sendMessage(remoteJid, { text: 'Linknya mana? Contoh: .yt https://youtu.be/xxxxx' }, { quoted: msg });
-
-                        await sock.sendMessage(remoteJid, { react: { text: "⏳", key: msg.key } });
-
-                        try {
-                            const data = await ssyoutube.download(q);
-                            
-                            if (data.error) {
-                                return await sock.sendMessage(remoteJid, { text: `❌ Error: ${data.error}` }, { quoted: msg });
-                            }
-
-                            // Kita cari kualitas terbaik (720p atau 360p)
-                            // Filter yang ada audio-nya (karena kadang ada yg video doang tanpa suara)
-                            const video = data.downloads.find(v => v.quality === '720' && !v.audio) || 
-                                          data.downloads.find(v => v.quality === '360' && !v.audio) ||
-                                          data.downloads[0];
-
-                            if (!video || !video.url) {
-                                return await sock.sendMessage(remoteJid, { text: '❌ Gagal mendapatkan link download.' }, { quoted: msg });
-                            }
-
-                            const captionYT = `
-🎬 *YOUTUBE DOWNLOADER*
-
-📌 *Judul:* ${data.meta.title}
-⏱️ *Durasi:* ${data.meta.duration}
-💾 *Size:* ${video.size}
-🎞️ *Kualitas:* ${video.quality}p
-
-_Sedang mengirim file..._
-`;
-                            // Kirim Videonya
-                            await sock.sendMessage(remoteJid, { 
-                                video: { url: video.url }, 
-                                caption: captionYT 
-                            }, { quoted: msg });
-
-                        } catch (e) {
-                            console.error(e);
-                            await sock.sendMessage(remoteJid, { text: '❌ Gagal download. Link mungkin invalid atau server sibuk.' }, { quoted: msg });
-                        }
-                        break;
+                        
                 }
             }
         }
     });
 }
+
+// PERBAIKAN 3: ANTI CRASH (JARING PENGAMAN)
+// Kalau ada error, bot tidak akan mati, cuma lapor error di terminal
+process.on('uncaughtException', (err) => {
+    console.error('Caught exception: ', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Agar terminal tidak mati sendiri (Keep Alive)
+setInterval(() => {}, 10000);
 
 connectToWhatsApp();
