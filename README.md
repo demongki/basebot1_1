@@ -20,11 +20,7 @@ _Dikembangkan khusus untuk efisiensi, fitur media, dan manajemen otomatis._
 ## 📝 Deskripsi
 **BloodSword Bot** adalah bot WhatsApp berbasis Node.js yang menggunakan library `@whiskeysockets/baileys`. Bot ini dirancang dengan arsitektur **Multi-Device** yang stabil, ringan, dan memiliki fitur "Auto-Restart" jika terjadi perubahan kode (Hot Reload).
 
-Cocok untuk kebutuhan:
-* Management Group & Store
-* Konversi Media (Stiker/Gambar)
-* AI Assistant
-* Downloader & Tools Harian
+Fokus utama bot ini adalah performa ringan tanpa fitur sampah yang memberatkan server.
 
 ## ✨ Fitur Unggulan
 
@@ -33,19 +29,11 @@ Cocok untuk kebutuhan:
 | **🎨 Media** | `.sticker` / `.s` | Ubah Gambar/Video jadi Stiker WA |
 | | `.toimg` | Ubah Stiker jadi Gambar (Jernih) |
 | **🤖 AI & Pintar** | `.ai [tanya]` | Tanya Jawab Pintar (ChatGPT Style) |
-| | `.wiki [query]` | Cari artikel Wikipedia Indonesia |
-| | `.tr [bahasa]` | Terjemahkan teks otomatis |
-| **📥 Downloader** | `.yt [link]` | Download Video YouTube (Tanpa Iklan) |
-| **🛠️ Tools** | `.qr [teks]` | Buat QR Code instan |
-| | `.short [link]` | Pendekkan link panjang (Shortlink) |
-| | `.gempa` | Info Gempa Terkini (Realtime BMKG) |
-| **🕌 Islami** | `.sholat [kota]` | Jadwal Sholat sesuai lokasi |
-| | `.ngaji` | Tampilkan ayat Al-Qur'an acak |
-| **🎮 Fun Games** | `.suit` | Adu suit lawan Bot |
-| | `.slot` | Game keberuntungan Slot Machine |
-| | `.cekkhodam` | Cek khodam (Just for fun) |
-| **⚙️ System** | `.info` | Cek status Server (RAM, CPU, Uptime) |
-| | `.dev` | Mode Developer (Live Code Detective) |
+| **🌍 Info Realtime** | `.gempa` | Info Gempa Terkini (Data BMKG) |
+| **⚙️ System** | `.info` | Cek status Server (RAM, CPU, Platform) |
+| | `.runtime` | Cek durasi bot menyala (Uptime) |
+| | `.ping` | Cek kecepatan respon bot |
+| | `.owner` | Menampilkan Kontak Pemilik Bot |
 
 ---
 
@@ -65,7 +53,7 @@ Pastikan kamu sudah menginstall **Node.js** dan **Git** di komputer kamu.
     ```
 
 3.  **Jalankan Bot:**
-    Kamu bisa menggunakan perintah start biasa atau mode developer (auto-restart).
+    Disarankan menggunakan mode dev agar auto-restart saat ada error/perubahan.
     ```bash
     npm start
     ```
@@ -79,9 +67,9 @@ Pastikan kamu sudah menginstall **Node.js** dan **Git** di komputer kamu.
 
 ## ⚙️ Konfigurasi
 
-Kamu bisa mengubah pengaturan dasar di file `zakkyconfig.js` atau di bagian atas `index.js`:
+Kamu bisa mengubah pengaturan dasar (Nama Owner, Nama Toko) di file `zakkyconfig.js`.
 
 ```javascript
 global.ownerName = "Achmad Zakky Anwar"
 global.namaStore = "BloodSword Store"
-global.kontakOwner = "628xxxxxxxx" // Ganti dengan nomormu
+global.kontakOwner = "628xxxxxxxx"
